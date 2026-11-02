@@ -5,7 +5,7 @@
 # Cross-builds the Linux release binaries with cargo-zigbuild. Run inside the
 # ghcr.io/rust-cross/cargo-zigbuild image with the repository at /src, as
 # scripts/build-all.ps1 and the release workflow do:
-#   docker run --rm -v "$PWD:/src" -w /src ghcr.io/rust-cross/cargo-zigbuild:0.20.1 \
+#   docker run --rm -v "$PWD:/src" -w /src ghcr.io/rust-cross/cargo-zigbuild:0.23.4 \
 #       sh scripts/build-linux.sh
 # Binaries land in target/<triple>/release/wedge.
 set -eu

@@ -27,7 +27,7 @@ param(
 $ErrorActionPreference = 'Stop'
 Set-Location (Split-Path $PSScriptRoot -Parent)
 
-$zigImage = 'ghcr.io/rust-cross/cargo-zigbuild:0.20.1'
+$zigImage = 'ghcr.io/rust-cross/cargo-zigbuild:0.23.4'
 $linuxTargets = @(
     'x86_64-unknown-linux-gnu', 'aarch64-unknown-linux-gnu',
     'x86_64-unknown-linux-musl', 'aarch64-unknown-linux-musl'
