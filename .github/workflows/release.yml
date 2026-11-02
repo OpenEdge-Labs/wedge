@@ -140,6 +140,13 @@ jobs:
       contents: write
       id-token: write
       attestations: write
+      packages: write
+    # For dry runs: a local registry to rehearse the image push against.
+    services:
+      registry:
+        image: registry:2.8.3
+        ports:
+          - 5000:5000
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
@@ -170,6 +177,41 @@ jobs:
             build/*.msi
             build/*.cdx.json
             build/SHA256SUMS
+      # The container image on GitHub Packages: one multi-architecture tag
+      # per version plus `latest`, signed and attested like the files. Dry
+      # runs rehearse the same steps against the throwaway registry above.
+      - id: image
+        env:
+          TOKEN: ${{ github.token }}
+        run: |
+          version=$(sed -n 's/^version = "\(.*\)"/\1/p' Cargo.toml | head -n 1)
+          if [[ "$GITHUB_REF" == refs/tags/v* ]]; then
+            image=ghcr.io/${GITHUB_REPOSITORY_OWNER,,}/wedge
+            tls=true
+            printf '%s' "$TOKEN" | skopeo login ghcr.io -u "$GITHUB_ACTOR" --password-stdin
+            printf '%s' "$TOKEN" | docker login ghcr.io -u "$GITHUB_ACTOR" --password-stdin
+          else
+            image=localhost:5000/wedge
+            tls=false
+          fi
+          for arch in amd64 arm64; do
+            skopeo copy --dest-tls-verify="$tls" \
+              "docker-archive:build/wedge-$version-oci-$arch.tar" "docker://$image:$version-$arch"
+          done
+          docker buildx imagetools create -t "$image:$version" -t "$image:latest" \
+            "$image:$version-amd64" "$image:$version-arm64"
+          docker buildx imagetools inspect "$image:latest"
+          digest=$(docker buildx imagetools inspect "$image:$version" --format '{{json .Manifest.Digest}}' | tr -d '"')
+          echo "name=$image" >> "$GITHUB_OUTPUT"
+          echo "digest=$digest" >> "$GITHUB_OUTPUT"
+      - if: startsWith(github.ref, 'refs/tags/v')
+        run: cosign sign --yes "${{ steps.image.outputs.name }}@${{ steps.image.outputs.digest }}"
+      - if: startsWith(github.ref, 'refs/tags/v')
+        uses: actions/attest-build-provenance@e8998f949152b193b063cb0ec769d69d929409be # v2.4.0
+        with:
+          subject-name: ${{ steps.image.outputs.name }}
+          subject-digest: ${{ steps.image.outputs.digest }}
+          push-to-registry: true
       - if: startsWith(github.ref, 'refs/tags/v')
         env:
           GH_TOKEN: ${{ github.token }}

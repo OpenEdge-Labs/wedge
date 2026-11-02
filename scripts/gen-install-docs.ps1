@@ -22,8 +22,10 @@ $header = "<!-- SPDX-License-Identifier: Apache-2.0 -->`n<!-- Copyright (c) Open
 function Get-Status($p) {
     if ($p.tested -eq 'ci-runner') {
         return 'Untested on a real machine. The MSI is tested on a GitHub-hosted Windows Server ' +
-            'runner by `scripts/test-msi.ps1` in every release build (silent install, service start, ' +
-            'HTTP check, uninstall); a Windows 10/11 desktop or VM run is still to be confirmed.'
+            'runner by `scripts/test-msi.ps1` in every release build: silent fresh install with custom ' +
+            'folders, ports and account (permissions, service, website, admin login, firewall, ' +
+            'shortcuts, uninstall), upgrade from the previous release, and reinstall with its data ' +
+            'deleted. The setup dialogs and a Windows 10/11 desktop run are still to be confirmed.'
     }
     if ($p.tested -eq 'untested') {
         return 'Untested: these steps have not yet been run on a clean machine or VM.'
@@ -95,35 +97,88 @@ foreach ($p in $source.platforms) {
                     "if ((Get-FileHash $msi -Algorithm SHA256).Hash.ToLower() -ne `$expected) { throw 'checksum mismatch' }"
                 )), ''
             $md += '## 2. Install', '',
-                "Double-click ``$msi``, or from an elevated PowerShell (``/qn`` for a silent install):", '',
-                (Get-PsBlock @("msiexec /i $msi")), '',
-                'The installer:', '',
-                '- installs `wedge.exe`, the user guide and examples to `C:\Program Files\wedge` and',
-                '  adds it to `PATH`;',
-                '- creates `C:\ProgramData\wedge\wedge.toml` (loopback only, port 8080) and a test',
-                '  page; upgrades and uninstall keep them;',
+                "Double-click ``$msi``. Until the installer is Authenticode-signed (pending SignPath",
+                'Foundation approval), Windows SmartScreen reports an unknown publisher: check the',
+                'SHA-256 above first, then choose **More info > Run anyway**. The installer asks:', '',
+                '| Step | What you choose | Default |',
+                '|---|---|---|',
+                '| Previous installation found (only when one is) | **Upgrade it** (keep its folders, configuration, web content, ports and accounts) or **Uninstall it and install fresh**, optionally also deleting its configuration, accounts, logs and the web folder wEdge created | Upgrade |',
+                '| Destination folder | where `wedge.exe`, the docs and the shortcuts go | `C:\Program Files\wedge` |',
+                '| Web application folder | the folder wEdge serves; an empty one gets a default page, existing files are kept | `<install folder>\www` |',
+                '| Configuration folder | holds `wedge.toml`, `conf.d` and the administrator accounts | `<install folder>\conf` |',
+                '| Web port | the website''s port; tick **Allow other computers** to listen on every interface and open the port in Windows Firewall | 8080, this computer only |',
+                '| Admin port | the [admin page](../guide/admin.md) (status, metrics, reload), reachable from this computer only | 9090 |',
+                '| Administrator account | user name and password (at least 12 characters) for the admin page; leave the password empty to install without it | `admin` |', '',
+                'The installer then:', '',
+                '- locks the install and configuration folders so only Administrators and SYSTEM can',
+                '  change them (other users may read), and adds the install folder to `PATH`;',
+                '- writes `wedge.toml` with `wedge init` and the account with `wedge admin set-password`,',
+                '  which stores only an Argon2id hash in `admin-users.txt`, readable by administrators',
+                '  and the service only (the password is not written to disk or to the installer log);',
                 '- registers and starts the `wedge` service as the virtual account `NT SERVICE\wedge`,',
-                '  logging to `C:\ProgramData\wedge\logs\wedge.log`.', '',
-                'Until the installer is Authenticode-signed (pending SignPath Foundation approval),',
-                'Windows SmartScreen reports an unknown publisher; check the SHA-256 above first.', ''
-            $md += '## 3. Check', '', (Get-PsBlock @('curl.exe -I http://127.0.0.1:8080/')), ''
-            $md += '## Configure and reload', '', (Get-PsBlock @(
-                    'notepad C:\ProgramData\wedge\wedge.toml'
-                    'wedge check-config -c C:\ProgramData\wedge\wedge.toml'
-                    'sc.exe control wedge paramchange'
+                '  logging to `<install folder>\logs\wedge.log`;',
+                '- adds Start menu (**wEdge**) and install-folder shortcuts: **Start wEdge**, **Stop wEdge**,',
+                '  **Restart wEdge**, **wEdge status**, **Edit wEdge configuration**, **wEdge admin page**,',
+                '  the web, configuration and log folders, the user guide, and **Uninstall wEdge**.', '',
+                'The shortcuts run `wedge-control.cmd` in the install folder, which asks for',
+                'administrator rights when it needs them. **Edit wEdge configuration** opens',
+                '`wedge.toml` in Notepad, then checks it and reloads the service when you press a key.', ''
+            $md += '## 3. Check', '', (Get-PsBlock @(
+                    'curl.exe -I http://127.0.0.1:8080/'
+                    'wedge service status'
                 )), '',
-                'To serve the network, change `listen` (for example `"0.0.0.0:80"`) and allow the',
-                'port in Windows Defender Firewall.', ''
+                'Expect `HTTP/1.1 200 OK`. The admin page is at `http://127.0.0.1:9090/` (the browser',
+                'asks for the account).', ''
+            $md += '## Silent install', '',
+                'Every choice is a property on the `msiexec` command line. From an elevated PowerShell:', '',
+                (Get-PsBlock @(
+                    "msiexec /i $msi /qn /l*v install.log ``"
+                    '  INSTALLFOLDER="D:\wedge" HTTPPORT=80 PUBLICACCESS=1 ADMINPORT=9090 ADMINUSER=admin'
+                )), '',
+                '| Property | Meaning | Default |',
+                '|---|---|---|',
+                '| `INSTALLFOLDER` | destination folder | `C:\Program Files\wedge\` |',
+                '| `WEBROOT` | web application folder | `<INSTALLFOLDER>\www\` |',
+                '| `CONFIGFOLDER` | configuration folder | `<INSTALLFOLDER>\conf\` |',
+                '| `HTTPPORT` | web port | `8080` |',
+                '| `PUBLICACCESS` | `1`: listen on every interface and open the firewall | off |',
+                '| `ADMINPORT` | admin page port | `9090` |',
+                '| `ADMINUSER`, `ADMINPASSWORD` | administrator account; no password, no admin page | `admin`, none |',
+                '| `UPGRADEMODE` | with an older version installed: `upgrade` or `fresh` | `upgrade` |',
+                '| `PURGEOLD` | with `UPGRADEMODE=fresh`: `1` also deletes the old configuration and content | off |', '',
+                'A password on the command line is visible to other administrators while `msiexec`',
+                'runs and stays in your shell history; for unattended installs, leave it out and run',
+                '`wedge admin set-password --config <CONFIGFOLDER>\wedge.toml` afterwards.', ''
+            $md += '## Configure and reload', '',
+                'Use **Edit wEdge configuration**, or from an elevated PowerShell:', '',
+                (Get-PsBlock @(
+                    'notepad "C:\Program Files\wedge\conf\wedge.toml"'
+                    'wedge check-config -c "C:\Program Files\wedge\conf\wedge.toml"'
+                    'wedge service reload'
+                )), '',
+                'To serve the network later, change `listen` (for example `["0.0.0.0:80"]`) and allow the',
+                'port in Windows Defender Firewall. Changing `listen` or `[server.admin]` needs',
+                '`wedge service restart`.', ''
+            $md += '## Upgrade', '',
+                'Run the newer installer. When it finds the older version it offers to **Upgrade** it,',
+                'keeping everything, or to **uninstall it and install fresh** (see step 2). Upgrades from',
+                '0.1 keep the configuration in `C:\ProgramData\wedge`.', ''
             $md += '## Remove', '',
-                "Settings > Apps > wEdge > Uninstall, or ``msiexec /x $msi``. The configuration in",
-                '`C:\ProgramData\wedge` is kept.', ''
+                "**Uninstall wEdge** (Start menu), Settings > Apps > wEdge > Uninstall, or ``msiexec /x $msi``.",
+                'The service, program files, shortcuts and firewall rule are removed; the configuration,',
+                'accounts, web content and logs are kept.', ''
             $md += '## Portable zip (no installer)', '',
                 "[$zip]($rel/$zip) contains the same files. Copy",
-                '`wedge.exe` to `C:\Program Files\wedge\` (the service refuses other locations),',
-                'then from an elevated PowerShell:', '', (Get-PsBlock @(
-                    "& 'C:\Program Files\wedge\wedge.exe' service install -c C:\ProgramData\wedge\wedge.toml"
-                    'Start-Service wedge'
-                )), ''
+                '`wedge.exe` to a folder only administrators can change (for example',
+                '`C:\Program Files\wedge\`; the service refuses others), then from an elevated PowerShell:', '',
+                (Get-PsBlock @(
+                    "cd 'C:\Program Files\wedge'"
+                    '.\wedge.exe init --config conf\wedge.toml --web-root www --admin-port 9090'
+                    '.\wedge.exe admin set-password --config conf\wedge.toml'
+                    '.\wedge.exe service install -c conf\wedge.toml --log-dir logs'
+                    '.\wedge.exe service start'
+                )), '',
+                'See [running as a service](../guide/services.md#windows-service) for the service commands.', ''
         }
         'macos' {
             $md += '## 1. Download and verify', '',

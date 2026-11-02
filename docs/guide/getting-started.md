@@ -43,6 +43,20 @@ wedge run -c ~/site.toml
 Open <http://127.0.0.1:8080/>. Each request is logged on the terminal; stop
 with Ctrl+C. wedge finishes requests in flight before it exits.
 
+Or let wedge write the starting point for you: `wedge init` creates the
+configuration file and the web folder with a default page, and with
+`--admin-port` it also turns on the [admin page](admin.md):
+
+```sh
+wedge init --config ~/site.toml --web-root ~/site --port 8080 --admin-port 9090
+wedge admin set-password --config ~/site.toml
+wedge run -c ~/site.toml
+```
+
+`wedge init` never overwrites an existing configuration unless you pass
+`--force`, and then keeps the old one as `<name>.bak-<time>`. Add `--public`
+to listen on every network interface instead of this computer only.
+
 ## 3. What you get by default
 
 Without any extra configuration, wedge already:
@@ -64,3 +78,4 @@ Without any extra configuration, wedge already:
 - Add HTTPS: [TLS](tls.md).
 - Put an application behind wedge: [reverse proxy](reverse-proxy.md).
 - Run it permanently: [services](services.md).
+- Watch it and reload it from a browser: [admin page](admin.md).

@@ -44,6 +44,10 @@ admin listener by pointing a DNS name at 127.0.0.1. Keep the admin listener
 on loopback or a management network; wedge warns if it is not on loopback,
 and refuses to share an address with a public listener.
 
+With administrator accounts (`users`), the same listener also serves a status
+page and every request needs a login, `/metrics` included; see
+[Admin page and accounts](admin.md).
+
 | Metric | Type | Labels |
 |---|---|---|
 | `wedge_http_requests_total` | counter | `vhost`, `method`, `status` (class: `2xx`, `4xx`, ...) |
@@ -71,13 +75,15 @@ scrape_configs:
 
 ## Reload
 
-Three ways to reload the configuration without dropping connections:
+Ways to reload the configuration without dropping connections:
 
 | How | Where |
 |---|---|
 | `systemctl reload wedge` (sends SIGHUP) | Linux with systemd |
 | `rc-service wedge reload` | Alpine / OpenRC |
-| `sc.exe control wedge paramchange` | Windows service |
+| `wedge service reload` (or `sc.exe control wedge paramchange`) | Windows service |
+| The **Edit wEdge configuration** shortcut (checks, then reloads) | Windows, installed with the MSI |
+| The **Reload configuration** button on the [admin page](admin.md) | anywhere the admin page is on |
 | `wedge reload -c wedge.toml` | anywhere, through the admin listener |
 
 `wedge reload` needs a token on the admin listener. Store it in a file only

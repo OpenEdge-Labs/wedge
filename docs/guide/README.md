@@ -21,13 +21,15 @@ configuration that is validated before it is used.
 5. [Reverse proxy](reverse-proxy.md): upstreams, health checks, forwarded
    headers, timeouts.
 6. [Operations](operations.md): logs, metrics, reload, limits.
-7. [Running as a service](services.md): systemd, OpenRC, Windows service,
+7. [Admin page and accounts](admin.md): the status page, administrator
+   logins and how they are protected.
+8. [Running as a service](services.md): systemd, OpenRC, Windows service,
    containers.
-8. [Debug capture](debug-capture.md): following a request through every
+9. [Debug capture](debug-capture.md): following a request through every
    layer.
-9. [Troubleshooting](troubleshooting.md): common errors and what they mean.
-10. [Security](security.md): hardening checklist and how to report a problem.
-11. [Configuration reference](configuration-reference.md): every key, type and
+10. [Troubleshooting](troubleshooting.md): common errors and what they mean.
+11. [Security](security.md): hardening checklist and how to report a problem.
+12. [Configuration reference](configuration-reference.md): every key, type and
     default (generated from the schema).
 
 Installation steps for each operating system are in the
@@ -39,7 +41,8 @@ code is in [request flow](../architecture/request-flow.md).
 - Shell commands assume Linux; Windows equivalents are given where they
   differ.
 - `wedge.toml` means your master configuration file. Packages install it at
-  `/etc/wedge/wedge.toml`; the Windows guide uses
-  `C:\ProgramData\wedge\wedge.toml`.
+  `/etc/wedge/wedge.toml`; the Windows installer puts it in the configuration
+  folder you choose, by default `C:\Program Files\wedge\conf\wedge.toml`
+  (`C:\ProgramData\wedge\wedge.toml` for installations upgraded from 0.1).
 - Every configuration example in this guide is checked with
   `wedge check-config` before each release.
