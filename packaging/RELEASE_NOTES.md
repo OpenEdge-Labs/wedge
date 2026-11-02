@@ -1,56 +1,74 @@
 <!-- SPDX-License-Identifier: Apache-2.0 -->
 <!-- Copyright (c) OpenEdge Labs -->
-Security update for **wEdge** (`wedge`) 0.1.0, from the security assessment
-of the first release ([report](https://github.com/OpenEdge-Labs/wedge/blob/main/docs/security/assessment-report.md)).
-No high or critical issues were found. Upgrading is recommended.
+**wEdge** (`wedge`) 0.2.0 brings a new Windows installer, an admin page with
+administrator logins, and the container image on GitHub Packages. The
+project now lives at <https://github.com/OpenEdge-Labs/wedge>.
 
-## Security fixes
+## New Windows installer
 
-- **Connection slots held by silent clients (Medium).** A plain-HTTP
-  connection that never sent a byte kept its slot until the 60 s idle
-  timeout; enough of them made other clients wait up to a minute. New
-  connections must now start their request within the header timeout
-  (10 s by default).
-- **Debug capture log redaction (Medium).** With `[server.debug]
-  read_packet` on, credential headers or query strings longer than 8 KiB
-  could be written to the capture log unredacted. They are now redacted.
-  Capture is off by default.
-- **Request validation (Low).** A `Host` header with an out-of-range port,
-  and absolute-form targets with `user@`, now get 400; a file requested
-  with a trailing slash (`/page.html/`) now gets 404.
-- **Log flooding (Low).** TLS clients that send an IP address as the server
-  name no longer produce a warning line per connection; such handshakes are
-  logged at debug level and counted in `wedge_tls_handshake_failures_total`.
-- **Proxy health (Low).** A just-failed upstream could be retried at once
-  when two requests raced; fixed.
+- Asks for the install folder, the **web application folder**, the
+  **configuration folder**, the **web port** (optionally reachable from other
+  computers, with a Windows Firewall rule), the **admin port** and an
+  **administrator account**.
+- Finds an older wEdge and offers to **upgrade** it (keeping its folders,
+  configuration, content and accounts) or to **uninstall it and install
+  fresh**, optionally deleting its configuration and the content it created.
+- Adds **Start menu and install-folder shortcuts**: start, stop, restart and
+  status of the service, edit the configuration (checked, then reloaded), the
+  admin page, the web, configuration and log folders, the user guide, and
+  uninstall.
+- Locks the install and configuration folders to Administrators and SYSTEM.
+  Every choice is also a property for silent installs; see the
+  [Windows install guide](https://github.com/OpenEdge-Labs/wedge/blob/main/docs/install/windows.md).
+- New installs keep everything under the install folder by default
+  (`conf\wedge.toml`, `www`, `logs`). Upgrades from 0.1 keep using
+  `C:\ProgramData\wedge`.
 
-## Other changes
+## Admin page and accounts
 
-- The installed configurations set `Content-Security-Policy`,
-  `Permissions-Policy` and `Cross-Origin-Resource-Policy` for the bundled
-  welcome page. See "Response headers" in the security guide for your own
-  site. An edited `wedge.toml` is never overwritten (the .deb/.rpm update
-  it only if unchanged; the Windows installer never replaces it), so copy
-  the `[vhost.headers]` block from `examples/wedge.toml` if you want it.
-- Binaries embed their dependency list (`cargo auditable`), and each release
-  includes a CycloneDX SBOM (`wedge-0.1.1.cdx.json`), so `cargo audit bin`
-  and `trivy` can check what you run.
-- Release workflow actions are pinned to commit SHAs; the MSI, SBOM and
-  `SHA256SUMS` now have build provenance attestations.
+- `[server.admin] users = "file:admin-users.txt"` turns on administrator
+  accounts: the admin listener then shows a **status page** (version,
+  uptime, connections, listeners, virtual hosts, upstream health) with a
+  **Reload configuration** button, and every admin request, `/metrics`
+  included, needs a login.
+- Only Argon2id password hashes are stored; five failed logins lock the
+  address out for five minutes; the Reload button refuses cross-site
+  requests; the page runs no scripts and cannot be framed.
+- See the [admin page guide](https://github.com/OpenEdge-Labs/wedge/blob/main/docs/guide/admin.md).
+
+## New commands
+
+- `wedge init` writes a starter configuration and web folder.
+- `wedge admin set-password` creates an account or changes a password
+  (asked without echo).
+- Windows: `wedge service start | stop | restart | status | reload`, and
+  `wedge service install --log-dir`.
+
+## Changed
+
+- **Windows service check.** `wedge service install`, and the service at
+  every start, now check the folder permissions of `wedge.exe` and every
+  folder above it instead of requiring Program Files: any folder only
+  administrators can change is accepted.
+- **Container image on GitHub Packages:** `ghcr.io/openedge-labs/wedge:0.2.0`
+  (amd64 and arm64), signed with Sigstore and with build provenance.
+- **Minimum Rust version for building from source: 1.88** (was 1.80), for
+  the fixed `rpassword` (GHSA-2p6r-x3vv-xqm2, low severity).
+- Copyright holder: OpenEdge Labs.
 
 ## Downloads
 
 | File | For |
 |---|---|
-| `wedge-0.1.1-x86_64.msi` | Windows installer (service, PATH, docs) |
-| `wedge-0.1.1-x86_64-pc-windows-msvc.zip` | Windows, portable |
-| `wedge_0.1.1-1_{amd64,arm64}.deb` | Debian, Ubuntu, Kali |
-| `wedge-0.1.1-1.{x86_64,aarch64}.rpm` | Fedora, RHEL and compatible |
-| `wedge-0.1.1-{x86_64,aarch64}-unknown-linux-musl.tar.gz` | any Linux (static) |
-| `wedge-0.1.1-{x86_64,aarch64}-unknown-linux-gnu.tar.gz` | Linux with glibc 2.17+ |
-| `wedge-0.1.1-{aarch64,x86_64}-apple-darwin.tar.gz` | macOS |
-| `wedge-0.1.1-oci-{amd64,arm64}.tar` | container image (`docker load -i`) |
-| `wedge-0.1.1.cdx.json` | software bill of materials (CycloneDX 1.5) |
+| `wedge-0.2.0-x86_64.msi` | Windows installer |
+| `wedge-0.2.0-x86_64-pc-windows-msvc.zip` | Windows, portable |
+| `wedge_0.2.0-1_{amd64,arm64}.deb` | Debian, Ubuntu, Kali |
+| `wedge-0.2.0-1.{x86_64,aarch64}.rpm` | Fedora, RHEL and compatible |
+| `wedge-0.2.0-{x86_64,aarch64}-unknown-linux-musl.tar.gz` | any Linux (static) |
+| `wedge-0.2.0-{x86_64,aarch64}-unknown-linux-gnu.tar.gz` | Linux with glibc 2.17+ |
+| `wedge-0.2.0-{aarch64,x86_64}-apple-darwin.tar.gz` | macOS |
+| `ghcr.io/openedge-labs/wedge:0.2.0` | container image (also as `wedge-0.2.0-oci-{amd64,arm64}.tar`) |
+| `wedge-0.2.0.cdx.json` | software bill of materials (CycloneDX 1.5) |
 
 Install guides: <https://github.com/OpenEdge-Labs/wedge/blob/main/docs/install/README.md>.
 Every package and archive contains the user guide (Markdown and HTML).
@@ -61,23 +79,28 @@ Every package and archive contains the user guide (Markdown and HTML).
 sha256sum --ignore-missing -c SHA256SUMS
 gh attestation verify <file> --repo OpenEdge-Labs/wedge
 cosign verify-blob <file> --bundle <file>.sigstore.json \
-  --certificate-identity-regexp 'https://github.com/OpenEdge-Labs/wedge/' \
+  --certificate-identity-regexp '^https://github.com/OpenEdge-Labs/wedge/' \
   --certificate-oidc-issuer https://token.actions.githubusercontent.com
-cargo audit bin wedge    # inside an unpacked archive
+cosign verify ghcr.io/openedge-labs/wedge:0.2.0 \
+  --certificate-identity-regexp '^https://github.com/OpenEdge-Labs/wedge/' \
+  --certificate-oidc-issuer https://token.actions.githubusercontent.com
 ```
 
-The .deb and .rpm packages are GPG-signed with the key in
-`wedge-release.asc` (fingerprint
-`B84A 920D B6B5 11E6 46B1 24FD 983E F3CD D108 E023`):
-`sudo rpm --import wedge-release.asc && rpm -K <file>.rpm`.
+Signatures use the newer Sigstore bundle format: verify with cosign 3, or add
+`--new-bundle-format` with cosign 2.4 or later. The .deb and .rpm packages
+are GPG-signed with the key in `wedge-release.asc` (fingerprint
+`B84A 920D B6B5 11E6 46B1 24FD 983E F3CD D108 E023`).
 
 ## Known limitations
 
 - The Windows executable and installer are not yet Authenticode-signed
-  (signing through SignPath Foundation is pending approval), so Windows shows
-  an "unknown publisher" prompt. macOS binaries are not notarized.
+  (SignPath Foundation, pending), so Windows shows an "unknown publisher"
+  prompt. macOS binaries are not notarized.
+- The admin page uses HTTP Basic authentication: keep the admin listener on
+  loopback (the default) or a trusted management network.
 - No TLS to upstreams, WebSocket tunnelling or HTTP/2 to upstreams yet.
-- No per-client connection limit: one client can still occupy all
-  connection slots for up to the header timeout at a time.
-- Windows and macOS install guides are marked "untested" until run on a
-  real machine; the MSI is tested on a GitHub-hosted Windows runner.
+- No per-client connection limit.
+- The installer is tested silently on a GitHub-hosted Windows runner (fresh
+  install, upgrade from 0.1.1, reinstall with data deletion); its dialogs on a
+  Windows 10/11 desktop are not covered by that test. The macOS install guide
+  is untested.
