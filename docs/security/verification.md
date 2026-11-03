@@ -191,4 +191,5 @@ Sigstore bundles were published.
 | Dependencies in the binary | cargo-audit 0.22.2 `audit bin` on the unpacked x86_64 musl binary (1402 advisories loaded) | 180 dependencies found, no advisories |
 | Container image (release OCI tarball, amd64) | Trivy 0.56.2 | Rust binary detected, 165 packages, 0 vulnerabilities |
 | Install guides | `scripts/test-install.ps1` against the release URL | Debian 12, Ubuntu 24.04, Kali, Fedora 40, Rocky 9, Alpine 3.20: all pass |
-| Published image `ghcr.io/openedge-labs/wedge:0.2.0` | anonymous pull | not yet checked: the package is still private |
+| Published image `ghcr.io/openedge-labs/wedge:0.2.0` (`sha256:5dead4edfc10…`) | anonymous pull, `docker buildx imagetools inspect`, cosign 3.0.2 `verify`, `gh attestation verify oci://` | public; linux/amd64 and linux/arm64; `latest` is the same digest; signature and build provenance verified |
+| Published image, running (non-root, `--read-only --cap-drop ALL --security-opt no-new-privileges`) | smoke (45 checks), traversal (104 payloads), robustness (13 attacks) | 45/45, 104/104, 13/13; no errors or restarts |
