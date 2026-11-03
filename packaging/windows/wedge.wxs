@@ -256,30 +256,44 @@
     <CustomAction Id="CheckAdmin" BinaryRef="WedgeSetupCA" DllEntry="CheckAdmin" Execute="immediate" Return="check" />
     <CustomAction Id="CheckChoices" BinaryRef="WedgeSetupCA" DllEntry="CheckChoices" Execute="immediate" Return="check" />
 
-    <!-- Each step reuses a tested `wedge` command. Directory properties end
-         in a backslash, so a quoted one is written "[DIR]\" (the doubled
+    <!-- Each step reuses a tested `wedge` command, run by WixQuietExec: no
+         console window, and wedge's messages (such as why a step failed)
+         go to the installer log. Its command line is the CustomActionData,
+         a property named after the action. Directory properties end in a
+         backslash, so a quoted one is written "[DIR]\" (the doubled
          backslash keeps the closing quote a quote). -->
-    <CustomAction Id="PurgeOld" FileRef="WedgeExe"
-                  ExeCommand='service purge --config "[OLD_CONFIGFOLDER]wedge.toml" --web-root "[OLD_WEBROOT]\" --log-dir "[PURGE_LOGDIR]\"'
+    <SetProperty Id="PurgeOld" Before="PurgeOld" Sequence="execute"
+                 Value='"[#WedgeExe]" service purge --config "[OLD_CONFIGFOLDER]wedge.toml" --web-root "[OLD_WEBROOT]\" --log-dir "[PURGE_LOGDIR]\"' />
+    <CustomAction Id="PurgeOld" BinaryRef="Wix4UtilCA_$(sys.BUILDARCHSHORT)" DllEntry="WixQuietExec"
                   Execute="deferred" Impersonate="no" Return="ignore" />
-    <CustomAction Id="InitConfigWithAdmin" FileRef="WedgeExe"
-                  ExeCommand='init --config "[CONFIGFOLDER]wedge.toml" --web-root "[WEBROOT]\" --port [HTTPPORT] --admin-port [ADMINPORT] [PUBLICARG] --force'
+    <SetProperty Id="InitConfigWithAdmin" Before="InitConfigWithAdmin" Sequence="execute"
+                 Value='"[#WedgeExe]" init --config "[CONFIGFOLDER]wedge.toml" --web-root "[WEBROOT]\" --port [HTTPPORT] --admin-port [ADMINPORT] [PUBLICARG] --force' />
+    <CustomAction Id="InitConfigWithAdmin" BinaryRef="Wix4UtilCA_$(sys.BUILDARCHSHORT)" DllEntry="WixQuietExec"
                   Execute="deferred" Impersonate="no" Return="check" />
-    <CustomAction Id="InitConfig" FileRef="WedgeExe"
-                  ExeCommand='init --config "[CONFIGFOLDER]wedge.toml" --web-root "[WEBROOT]\" --port [HTTPPORT] [PUBLICARG] --force'
+    <SetProperty Id="InitConfig" Before="InitConfig" Sequence="execute"
+                 Value='"[#WedgeExe]" init --config "[CONFIGFOLDER]wedge.toml" --web-root "[WEBROOT]\" --port [HTTPPORT] [PUBLICARG] --force' />
+    <CustomAction Id="InitConfig" BinaryRef="Wix4UtilCA_$(sys.BUILDARCHSHORT)" DllEntry="WixQuietExec"
                   Execute="deferred" Impersonate="no" Return="check" />
-    <CustomAction Id="RollbackService" FileRef="WedgeExe" ExeCommand="service uninstall"
+    <SetProperty Id="RollbackService" Before="RollbackService" Sequence="execute"
+                 Value='"[#WedgeExe]" service uninstall' />
+    <CustomAction Id="RollbackService" BinaryRef="Wix4UtilCA_$(sys.BUILDARCHSHORT)" DllEntry="WixQuietExec"
                   Execute="rollback" Impersonate="no" Return="ignore" />
-    <CustomAction Id="InstallService" FileRef="WedgeExe"
-                  ExeCommand='service install --config "[CONFIGFOLDER]wedge.toml" --log-dir "[LOGFOLDER]\"'
+    <SetProperty Id="InstallService" Before="InstallService" Sequence="execute"
+                 Value='"[#WedgeExe]" service install --config "[CONFIGFOLDER]wedge.toml" --log-dir "[LOGFOLDER]\"' />
+    <CustomAction Id="InstallService" BinaryRef="Wix4UtilCA_$(sys.BUILDARCHSHORT)" DllEntry="WixQuietExec"
                   Execute="deferred" Impersonate="no" Return="check" />
-    <!-- HideTarget keeps the password out of the installer log. -->
+    <!-- Run directly, not through WixQuietExec: HideTarget keeps the
+         password out of the installer log. -->
     <CustomAction Id="SetAdminPassword" FileRef="WedgeExe" HideTarget="yes"
                   ExeCommand='admin set-password --config "[CONFIGFOLDER]wedge.toml" --user "[ADMINUSER]" --password "[ADMINPASSWORD]"'
                   Execute="deferred" Impersonate="no" Return="check" />
-    <CustomAction Id="StartService" FileRef="WedgeExe" ExeCommand="service start"
+    <SetProperty Id="StartService" Before="StartService" Sequence="execute"
+                 Value='"[#WedgeExe]" service start' />
+    <CustomAction Id="StartService" BinaryRef="Wix4UtilCA_$(sys.BUILDARCHSHORT)" DllEntry="WixQuietExec"
                   Execute="deferred" Impersonate="no" Return="ignore" />
-    <CustomAction Id="UninstallService" FileRef="WedgeExe" ExeCommand="service uninstall"
+    <SetProperty Id="UninstallService" Before="UninstallService" Sequence="execute"
+                 Value='"[#WedgeExe]" service uninstall' />
+    <CustomAction Id="UninstallService" BinaryRef="Wix4UtilCA_$(sys.BUILDARCHSHORT)" DllEntry="WixQuietExec"
                   Execute="deferred" Impersonate="no" Return="ignore" />
     <InstallExecuteSequence>
       <Custom Action="CheckChoices" After="CostFinalize"
