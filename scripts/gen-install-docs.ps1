@@ -21,11 +21,12 @@ $header = "<!-- SPDX-License-Identifier: Apache-2.0 -->`n<!-- Copyright (c) Open
 
 function Get-Status($p) {
     if ($p.tested -eq 'ci-runner') {
-        return 'Untested on a real machine. The MSI is tested on a GitHub-hosted Windows Server ' +
-            'runner by `scripts/test-msi.ps1` in every release build: silent fresh install with custom ' +
-            'folders, ports and account (permissions, service, website, admin login, firewall, ' +
-            'shortcuts, uninstall), upgrade from the previous release, and reinstall with its data ' +
-            'deleted. The setup dialogs and a Windows 10/11 desktop run are still to be confirmed.'
+        return 'Tested on a Windows 11 desktop (not a clean VM) on 2026-11-03: install through the ' +
+            'setup dialogs and uninstall, plus every `scripts/test-msi.ps1` scenario. That script ' +
+            'also runs on a GitHub-hosted Windows Server runner in every release build: refusal of a ' +
+            'weak password, silent fresh install with custom folders, ports and account (permissions, ' +
+            'service, website, admin login, firewall, shortcuts, uninstall), install on a second ' +
+            'drive, upgrade from the previous release, and reinstall with its data deleted.'
     }
     if ($p.tested -eq 'untested') {
         return 'Untested: these steps have not yet been run on a clean machine or VM.'
@@ -195,13 +196,14 @@ foreach ($p in $source.platforms) {
     }
     $file = "docs/install/$($p.id).md"
     [IO.File]::WriteAllText((Join-Path $PWD $file), (($md -join "`n").TrimEnd() + "`n"))
-    $pages += [pscustomobject]@{ Title = $p.title; File = "$($p.id).md"; Status = if ($p.tested -eq 'ci-runner') { 'Untested (MSI tested in CI)' } else { (Get-Status $p).Split(' ')[0].TrimEnd(':').TrimEnd('.') } }
+    $pages += [pscustomobject]@{ Title = $p.title; File = "$($p.id).md"; Status = if ($p.tested -eq 'ci-runner') { 'Tested on a Windows 11 desktop and in CI' } else { (Get-Status $p).Split(' ')[0].TrimEnd(':').TrimEnd('.') } }
 }
 
 $index = @($header, '# Installing wedge', '',
     'Pick your platform. Every Linux guide is run in a clean container before a release',
-    '(`scripts/test-install.ps1`); Windows and macOS guides stay marked "untested" until',
-    'they have been run on a real machine.', '',
+    '(`scripts/test-install.ps1`); the Windows MSI is tested on every release build',
+    '(`scripts/test-msi.ps1`) and was tested on a Windows 11 desktop; the macOS guide',
+    'stays marked "untested" until it has been run on a real machine.', '',
     '| Platform | Guide | Status |', '|---|---|---|')
 $index += $pages | ForEach-Object { "| $($_.Title) | [$($_.File)]($($_.File)) | $($_.Status) |" }
 $index += '', 'Other Linux distributions: use the static `x86_64-unknown-linux-musl` or',

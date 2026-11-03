@@ -12,8 +12,8 @@ version: ${VERSION}
 release: 1
 section: web
 priority: optional
-maintainer: Alingan Patra <alinganpatra20004@users.noreply.github.com>
-vendor: Alingan Patra
+maintainer: OpenEdge Labs <alinganpatra20004@users.noreply.github.com>
+vendor: OpenEdge Labs
 homepage: https://github.com/OpenEdge-Labs/wedge
 license: Apache-2.0
 description: |

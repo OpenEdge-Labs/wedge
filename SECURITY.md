@@ -6,7 +6,8 @@
 
 | Version | Security fixes |
 |---|---|
-| 0.1.x | yes |
+| 0.2.x | yes |
+| 0.1.x | no |
 
 Until 1.0, only the latest 0.x release receives fixes.
 

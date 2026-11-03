@@ -4,16 +4,16 @@
 
 # Install wedge on Windows 10/11 and Windows Server (x86_64)
 
-> Untested on a real machine. The MSI is tested on a GitHub-hosted Windows Server runner by `scripts/test-msi.ps1` in every release build (silent install, service start, HTTP check, uninstall); a Windows 10/11 desktop or VM run is still to be confirmed.
+> Tested on a Windows 11 desktop (not a clean VM) on 2026-11-03: install through the setup dialogs and uninstall, plus every `scripts/test-msi.ps1` scenario. That script also runs on a GitHub-hosted Windows Server runner in every release build: refusal of a weak password, silent fresh install with custom folders, ports and account (permissions, service, website, admin login, firewall, shortcuts, uninstall), install on a second drive, upgrade from the previous release, and reinstall with its data deleted.
 
 ## 1. Download and verify
 
 Download from the browser:
 
-- Installer: [wedge-0.1.1-x86_64.msi](https://github.com/OpenEdge-Labs/wedge/releases/download/v0.1.1/wedge-0.1.1-x86_64.msi)
-- Portable zip, no installer: [wedge-0.1.1-x86_64-pc-windows-msvc.zip](https://github.com/OpenEdge-Labs/wedge/releases/download/v0.1.1/wedge-0.1.1-x86_64-pc-windows-msvc.zip) (see [below](#portable-zip-no-installer))
-- Checksums: [SHA256SUMS](https://github.com/OpenEdge-Labs/wedge/releases/download/v0.1.1/SHA256SUMS)
-- All files and signatures: the [v0.1.1 release page](https://github.com/OpenEdge-Labs/wedge/releases/tag/v0.1.1)
+- Installer: [wedge-0.2.0-x86_64.msi](https://github.com/OpenEdge-Labs/wedge/releases/download/v0.2.0/wedge-0.2.0-x86_64.msi)
+- Portable zip, no installer: [wedge-0.2.0-x86_64-pc-windows-msvc.zip](https://github.com/OpenEdge-Labs/wedge/releases/download/v0.2.0/wedge-0.2.0-x86_64-pc-windows-msvc.zip) (see [below](#portable-zip-no-installer))
+- Checksums: [SHA256SUMS](https://github.com/OpenEdge-Labs/wedge/releases/download/v0.2.0/SHA256SUMS)
+- All files and signatures: the [v0.2.0 release page](https://github.com/OpenEdge-Labs/wedge/releases/tag/v0.2.0)
 
 Then compare `Get-FileHash <file>` with the file's line in `SHA256SUMS`.
 
@@ -24,62 +24,119 @@ project is approved; see the [code signing policy](../security/code-signing.md))
 Or download and verify in PowerShell:
 
 ```powershell
-$BASE = "https://github.com/OpenEdge-Labs/wedge/releases/download/v0.1.1"
-Invoke-WebRequest "$BASE/wedge-0.1.1-x86_64.msi" -OutFile wedge-0.1.1-x86_64.msi
+$BASE = "https://github.com/OpenEdge-Labs/wedge/releases/download/v0.2.0"
+Invoke-WebRequest "$BASE/wedge-0.2.0-x86_64.msi" -OutFile wedge-0.2.0-x86_64.msi
 Invoke-WebRequest "$BASE/SHA256SUMS" -OutFile SHA256SUMS
-$expected = (Select-String SHA256SUMS -Pattern ' wedge-0.1.1-x86_64.msi$').Line.Split(' ')[0]
-if ((Get-FileHash wedge-0.1.1-x86_64.msi -Algorithm SHA256).Hash.ToLower() -ne $expected) { throw 'checksum mismatch' }
+$expected = (Select-String SHA256SUMS -Pattern ' wedge-0.2.0-x86_64.msi$').Line.Split(' ')[0]
+if ((Get-FileHash wedge-0.2.0-x86_64.msi -Algorithm SHA256).Hash.ToLower() -ne $expected) { throw 'checksum mismatch' }
 ```
 
 ## 2. Install
 
-Double-click `wedge-0.1.1-x86_64.msi`, or from an elevated PowerShell (`/qn` for a silent install):
+Double-click `wedge-0.2.0-x86_64.msi`. Until the installer is Authenticode-signed (pending SignPath
+Foundation approval), Windows SmartScreen reports an unknown publisher: check the
+SHA-256 above first, then choose **More info > Run anyway**. The installer asks:
 
-```powershell
-msiexec /i wedge-0.1.1-x86_64.msi
-```
+| Step | What you choose | Default |
+|---|---|---|
+| Previous installation found (only when one is) | **Upgrade it** (keep its folders, configuration, web content, ports and accounts) or **Uninstall it and install fresh**, optionally also deleting its configuration, accounts, logs and the web folder wEdge created | Upgrade |
+| Destination folder | where `wedge.exe`, the docs and the shortcuts go | `C:\Program Files\wedge` |
+| Web application folder | the folder wEdge serves; an empty one gets a default page, existing files are kept | `<install folder>\www` |
+| Configuration folder | holds `wedge.toml`, `conf.d` and the administrator accounts | `<install folder>\conf` |
+| Web port | the website's port; tick **Allow other computers** to listen on every interface and open the port in Windows Firewall | 8080, this computer only |
+| Admin port | the [admin page](../guide/admin.md) (status, metrics, reload), reachable from this computer only | 9090 |
+| Administrator account | user name and password (at least 12 characters) for the admin page; leave the password empty to install without it | `admin` |
 
-The installer:
+The installer then:
 
-- installs `wedge.exe`, the user guide and examples to `C:\Program Files\wedge` and
-  adds it to `PATH`;
-- creates `C:\ProgramData\wedge\wedge.toml` (loopback only, port 8080) and a test
-  page; upgrades and uninstall keep them;
+- locks the install and configuration folders so only Administrators and SYSTEM can
+  change them (other users may read), and adds the install folder to `PATH`;
+- writes `wedge.toml` with `wedge init` and the account with `wedge admin set-password`,
+  which stores only an Argon2id hash in `admin-users.txt`, readable by administrators
+  and the service only (the password is not written to disk or to the installer log);
 - registers and starts the `wedge` service as the virtual account `NT SERVICE\wedge`,
-  logging to `C:\ProgramData\wedge\logs\wedge.log`.
+  logging to `<install folder>\logs\wedge.log`;
+- adds Start menu (**wEdge**) and install-folder shortcuts: **Start wEdge**, **Stop wEdge**,
+  **Restart wEdge**, **wEdge status**, **Edit wEdge configuration**, **wEdge admin page**,
+  the web, configuration and log folders, the user guide, and **Uninstall wEdge**.
 
-Until the installer is Authenticode-signed (pending SignPath Foundation approval),
-Windows SmartScreen reports an unknown publisher; check the SHA-256 above first.
+The shortcuts run `wedge-control.cmd` in the install folder, which asks for
+administrator rights when it needs them. **Edit wEdge configuration** opens
+`wedge.toml` in Notepad, then checks it and reloads the service when you press a key.
 
 ## 3. Check
 
 ```powershell
 curl.exe -I http://127.0.0.1:8080/
+wedge service status
 ```
+
+Expect `HTTP/1.1 200 OK`. The admin page is at `http://127.0.0.1:9090/` (the browser
+asks for the account).
+
+## Silent install
+
+Every choice is a property on the `msiexec` command line. From an elevated PowerShell:
+
+```powershell
+msiexec /i wedge-0.2.0-x86_64.msi /qn /l*v install.log `
+  INSTALLFOLDER="D:\wedge" HTTPPORT=80 PUBLICACCESS=1 ADMINPORT=9090 ADMINUSER=admin
+```
+
+| Property | Meaning | Default |
+|---|---|---|
+| `INSTALLFOLDER` | destination folder | `C:\Program Files\wedge\` |
+| `WEBROOT` | web application folder | `<INSTALLFOLDER>\www\` |
+| `CONFIGFOLDER` | configuration folder | `<INSTALLFOLDER>\conf\` |
+| `HTTPPORT` | web port | `8080` |
+| `PUBLICACCESS` | `1`: listen on every interface and open the firewall | off |
+| `ADMINPORT` | admin page port | `9090` |
+| `ADMINUSER`, `ADMINPASSWORD` | administrator account; no password, no admin page | `admin`, none |
+| `UPGRADEMODE` | with an older version installed: `upgrade` or `fresh` | `upgrade` |
+| `PURGEOLD` | with `UPGRADEMODE=fresh`: `1` also deletes the old configuration and content | off |
+
+A password on the command line is visible to other administrators while `msiexec`
+runs and stays in your shell history; for unattended installs, leave it out and run
+`wedge admin set-password --config <CONFIGFOLDER>\wedge.toml` afterwards.
 
 ## Configure and reload
 
+Use **Edit wEdge configuration**, or from an elevated PowerShell:
+
 ```powershell
-notepad C:\ProgramData\wedge\wedge.toml
-wedge check-config -c C:\ProgramData\wedge\wedge.toml
-sc.exe control wedge paramchange
+notepad "C:\Program Files\wedge\conf\wedge.toml"
+wedge check-config -c "C:\Program Files\wedge\conf\wedge.toml"
+wedge service reload
 ```
 
-To serve the network, change `listen` (for example `"0.0.0.0:80"`) and allow the
-port in Windows Defender Firewall.
+To serve the network later, change `listen` (for example `["0.0.0.0:80"]`) and allow the
+port in Windows Defender Firewall. Changing `listen` or `[server.admin]` needs
+`wedge service restart`.
+
+## Upgrade
+
+Run the newer installer. When it finds the older version it offers to **Upgrade** it,
+keeping everything, or to **uninstall it and install fresh** (see step 2). Upgrades from
+0.1 keep the configuration in `C:\ProgramData\wedge`.
 
 ## Remove
 
-Settings > Apps > wEdge > Uninstall, or `msiexec /x wedge-0.1.1-x86_64.msi`. The configuration in
-`C:\ProgramData\wedge` is kept.
+**Uninstall wEdge** (Start menu), Settings > Apps > wEdge > Uninstall, or `msiexec /x wedge-0.2.0-x86_64.msi`.
+The service, program files, shortcuts and firewall rule are removed; the configuration,
+accounts, web content and logs are kept.
 
 ## Portable zip (no installer)
 
-[wedge-0.1.1-x86_64-pc-windows-msvc.zip](https://github.com/OpenEdge-Labs/wedge/releases/download/v0.1.1/wedge-0.1.1-x86_64-pc-windows-msvc.zip) contains the same files. Copy
-`wedge.exe` to `C:\Program Files\wedge\` (the service refuses other locations),
-then from an elevated PowerShell:
+[wedge-0.2.0-x86_64-pc-windows-msvc.zip](https://github.com/OpenEdge-Labs/wedge/releases/download/v0.2.0/wedge-0.2.0-x86_64-pc-windows-msvc.zip) contains the same files. Copy
+`wedge.exe` to a folder only administrators can change (for example
+`C:\Program Files\wedge\`; the service refuses others), then from an elevated PowerShell:
 
 ```powershell
-& 'C:\Program Files\wedge\wedge.exe' service install -c C:\ProgramData\wedge\wedge.toml
-Start-Service wedge
+cd 'C:\Program Files\wedge'
+.\wedge.exe init --config conf\wedge.toml --web-root www --admin-port 9090
+.\wedge.exe admin set-password --config conf\wedge.toml
+.\wedge.exe service install -c conf\wedge.toml --log-dir logs
+.\wedge.exe service start
 ```
+
+See [running as a service](../guide/services.md#windows-service) for the service commands.

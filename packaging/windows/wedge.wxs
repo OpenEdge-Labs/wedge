@@ -27,7 +27,7 @@
      xmlns:util="http://wixtoolset.org/schemas/v4/wxs/util"
      xmlns:fw="http://wixtoolset.org/schemas/v4/wxs/firewall">
   <Package Name="wEdge"
-           Manufacturer="Alingan Patra"
+           Manufacturer="OpenEdge Labs"
            Version="$(var.Version)"
            UpgradeCode="967BB0DA-8140-4650-9D03-169EEA37A554"
            Scope="perMachine"

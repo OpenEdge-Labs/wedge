@@ -5,8 +5,9 @@
 # Installing wedge
 
 Pick your platform. Every Linux guide is run in a clean container before a release
-(`scripts/test-install.ps1`); Windows and macOS guides stay marked "untested" until
-they have been run on a real machine.
+(`scripts/test-install.ps1`); the Windows MSI is tested on every release build
+(`scripts/test-msi.ps1`) and was tested on a Windows 11 desktop; the macOS guide
+stays marked "untested" until it has been run on a real machine.
 
 | Platform | Guide | Status |
 |---|---|---|
@@ -16,7 +17,7 @@ they have been run on a real machine.
 | Fedora 40 | [fedora-40.md](fedora-40.md) | Tested |
 | RHEL 9 and compatible (Rocky Linux, AlmaLinux) | [rhel-9.md](rhel-9.md) | Tested |
 | Alpine Linux 3.20 | [alpine-3.20.md](alpine-3.20.md) | Tested |
-| Windows 10/11 and Windows Server (x86_64) | [windows.md](windows.md) | Untested (MSI tested in CI) |
+| Windows 10/11 and Windows Server (x86_64) | [windows.md](windows.md) | Tested on a Windows 11 desktop and in CI |
 | macOS (Apple silicon and Intel) | [macos.md](macos.md) | Untested |
 
 Other Linux distributions: use the static `x86_64-unknown-linux-musl` or

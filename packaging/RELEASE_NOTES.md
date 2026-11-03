@@ -23,6 +23,11 @@ project now lives at <https://github.com/OpenEdge-Labs/wedge>.
 - New installs keep everything under the install folder by default
   (`conf\wedge.toml`, `www`, `logs`). Upgrades from 0.1 keep using
   `C:\ProgramData\wedge`.
+- Checks the choices on each dialog page before installing anything: ports
+  that are invalid, equal or already in use, and an account name or password
+  wEdge would refuse (at least 12 characters), are reported right there.
+- Installs to a folder on a second drive (such as `D:\wedge`), and setup
+  steps record wEdge's own error message in the installer log.
 
 ## Admin page and accounts
 
@@ -101,6 +106,7 @@ are GPG-signed with the key in `wedge-release.asc` (fingerprint
 - No TLS to upstreams, WebSocket tunnelling or HTTP/2 to upstreams yet.
 - No per-client connection limit.
 - The installer is tested silently on a GitHub-hosted Windows runner (fresh
-  install, upgrade from 0.1.1, reinstall with data deletion); its dialogs on a
-  Windows 10/11 desktop are not covered by that test. The macOS install guide
-  is untested.
+  install, second drive, upgrade from 0.1.1, reinstall with data deletion)
+  and was installed and uninstalled through its dialogs on one Windows 11
+  desktop; it has not been tested on Windows 10 or on a clean VM. The macOS
+  install guide is untested.

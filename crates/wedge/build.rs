@@ -21,7 +21,7 @@ fn embed(icon: &str) {
         .set_icon(icon)
         .set("ProductName", "wEdge")
         .set("FileDescription", "wEdge web and application server")
-        .set("CompanyName", "Alingan Patra")
+        .set("CompanyName", "OpenEdge Labs")
         .set("LegalCopyright", "Copyright (c) OpenEdge Labs. Apache-2.0.");
     if let Err(e) = resource.compile() {
         // A missing resource compiler must not break the build; the binary

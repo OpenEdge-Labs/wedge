@@ -11,7 +11,7 @@
 Use `aarch64-apple-darwin` on Apple silicon and `x86_64-apple-darwin` on Intel Macs.
 
 ```sh
-VERSION=0.1.1
+VERSION=0.2.0
 BASE=https://github.com/OpenEdge-Labs/wedge/releases/download/v$VERSION
 curl -fLO "$BASE/wedge-${VERSION}-aarch64-apple-darwin.tar.gz"
 curl -fLO "$BASE/SHA256SUMS"

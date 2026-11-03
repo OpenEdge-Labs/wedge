@@ -18,7 +18,7 @@ Download the package and the checksum list from the GitHub release, and check th
 package before installing it. Never pipe a download straight into a shell.
 
 ```sh
-VERSION=0.1.1
+VERSION=0.2.0
 BASE=https://github.com/OpenEdge-Labs/wedge/releases/download/v$VERSION
 curl -fLO "$BASE/wedge_${VERSION}-1_amd64.deb"
 curl -fLO "$BASE/SHA256SUMS"
