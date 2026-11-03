@@ -55,8 +55,6 @@
          "fresh" uninstalls it and asks for everything again. -->
     <Property Id="UPGRADEMODE" Value="upgrade" Secure="yes" />
     <Property Id="PURGEOLD" Secure="yes" />
-    <Property Id="QUOTECHAR" Value="&quot;" />
-    <Property Id="BACKSLASH" Value="\" />
 
     <!-- What an earlier 0.2+ installation recorded. -->
     <Property Id="OLD_INSTALLDIR" Secure="yes">
@@ -251,6 +249,13 @@
       </Component>
     </Feature>
 
+    <!-- Checks of the choices (packaging/windows/ca): on the dialog pages,
+         and again before anything changes, for installs without dialogs. -->
+    <Binary Id="WedgeSetupCA" SourceFile="$(var.SetupCA)" />
+    <CustomAction Id="CheckPorts" BinaryRef="WedgeSetupCA" DllEntry="CheckPorts" Execute="immediate" Return="check" />
+    <CustomAction Id="CheckAdmin" BinaryRef="WedgeSetupCA" DllEntry="CheckAdmin" Execute="immediate" Return="check" />
+    <CustomAction Id="CheckChoices" BinaryRef="WedgeSetupCA" DllEntry="CheckChoices" Execute="immediate" Return="check" />
+
     <!-- Each step reuses a tested `wedge` command. Directory properties end
          in a backslash, so a quoted one is written "[DIR]\" (the doubled
          backslash keeps the closing quote a quote). -->
@@ -277,6 +282,8 @@
     <CustomAction Id="UninstallService" FileRef="WedgeExe" ExeCommand="service uninstall"
                   Execute="deferred" Impersonate="no" Return="ignore" />
     <InstallExecuteSequence>
+      <Custom Action="CheckChoices" After="CostFinalize"
+              Condition='NOT Installed AND NOT REMOVE AND NOT (WIX_UPGRADE_DETECTED AND UPGRADEMODE="upgrade")' />
       <Custom Action="UninstallService" Before="RemoveFiles" Condition='REMOVE="ALL"' />
       <Custom Action="PurgeOld" After="InstallFiles"
               Condition='FRESHINSTALL AND WIX_UPGRADE_DETECTED AND PURGEOLD="1"' />
@@ -423,15 +430,10 @@
       <!-- Ports and network reach. -->
       <Dialog Id="WedgePortsDlg" Width="370" Height="270" Title="[ProductName] Setup">
         <Control Id="Next" Type="PushButton" X="236" Y="243" Width="56" Height="17" Default="yes" Text="&amp;Next">
-          <Publish Property="WEDGE_ERROR" Value="{}" Order="1" />
-          <Publish Property="WEDGE_ERROR" Value="The web port must be a number from 1 to 65535." Order="2"
-                   Condition="NOT (HTTPPORT &gt;= 1 AND HTTPPORT &lt;= 65535)" />
-          <Publish Property="WEDGE_ERROR" Value="The admin port must be a number from 1 to 65535." Order="3"
-                   Condition="NOT WEDGE_ERROR AND NOT (ADMINPORT &gt;= 1 AND ADMINPORT &lt;= 65535)" />
-          <Publish Property="WEDGE_ERROR" Value="The web port and the admin port must differ." Order="4"
-                   Condition="NOT WEDGE_ERROR AND HTTPPORT = ADMINPORT" />
-          <Publish Event="SpawnDialog" Value="WedgeErrorDlg" Order="5" Condition="WEDGE_ERROR" />
-          <Publish Event="NewDialog" Value="WedgeAdminDlg" Order="6" Condition="NOT WEDGE_ERROR" />
+          <!-- Range, difference and whether each port is free. -->
+          <Publish Event="DoAction" Value="CheckPorts" Order="1" />
+          <Publish Event="SpawnDialog" Value="WedgeErrorDlg" Order="2" Condition="WEDGE_ERROR" />
+          <Publish Event="NewDialog" Value="WedgeAdminDlg" Order="3" Condition="NOT WEDGE_ERROR" />
         </Control>
         <Control Id="Back" Type="PushButton" X="180" Y="243" Width="56" Height="17" Text="&amp;Back">
           <Publish Event="NewDialog" Value="WedgePathsDlg" />
@@ -461,15 +463,13 @@
       <!-- The administrator account for the admin page. -->
       <Dialog Id="WedgeAdminDlg" Width="370" Height="270" Title="[ProductName] Setup">
         <Control Id="Next" Type="PushButton" X="236" Y="243" Width="56" Height="17" Default="yes" Text="&amp;Next">
+          <!-- The confirmation here; the rules wedge applies in CheckAdmin. -->
           <Publish Property="WEDGE_ERROR" Value="{}" Order="1" />
-          <Publish Property="WEDGE_ERROR" Value="Enter a user name." Order="2"
-                   Condition="ADMINPASSWORD AND NOT ADMINUSER" />
-          <Publish Property="WEDGE_ERROR" Value="The two passwords differ." Order="3"
-                   Condition="NOT WEDGE_ERROR AND ADMINPASSWORD &lt;&gt; ADMINPASSWORD2" />
-          <Publish Property="WEDGE_ERROR" Value="The user name and password cannot contain a double quote, and the password cannot end with a backslash." Order="4"
-                   Condition="NOT WEDGE_ERROR AND (ADMINUSER &gt;&lt; QUOTECHAR OR ADMINPASSWORD &gt;&lt; QUOTECHAR OR ADMINPASSWORD &gt;&gt; BACKSLASH)" />
-          <Publish Event="SpawnDialog" Value="WedgeErrorDlg" Order="5" Condition="WEDGE_ERROR" />
-          <Publish Event="NewDialog" Value="VerifyReadyDlg" Order="6" Condition="NOT WEDGE_ERROR" />
+          <Publish Property="WEDGE_ERROR" Value="The two passwords are different." Order="2"
+                   Condition="ADMINPASSWORD &lt;&gt; ADMINPASSWORD2" />
+          <Publish Event="DoAction" Value="CheckAdmin" Order="3" Condition="NOT WEDGE_ERROR" />
+          <Publish Event="SpawnDialog" Value="WedgeErrorDlg" Order="4" Condition="WEDGE_ERROR" />
+          <Publish Event="NewDialog" Value="VerifyReadyDlg" Order="5" Condition="NOT WEDGE_ERROR" />
         </Control>
         <Control Id="Back" Type="PushButton" X="180" Y="243" Width="56" Height="17" Text="&amp;Back">
           <Publish Event="NewDialog" Value="WedgePortsDlg" />
@@ -490,7 +490,7 @@
         <Control Id="ConfirmLabel" Type="Text" X="20" Y="108" Width="120" Height="12" NoPrefix="yes" Text="&amp;Confirm password:" />
         <Control Id="Confirm" Type="Edit" X="150" Y="106" Width="200" Height="17" Property="ADMINPASSWORD2" Password="yes" Text="{128}" />
         <Control Id="Rules" Type="Text" X="20" Y="134" Width="330" Height="40" NoPrefix="yes"
-                 Text="User name: letters, digits, '.', '_', '-' or '@'. Password: at least 12 characters. Setup stops with an error if either does not meet these rules. Only an Argon2id hash of the password is stored." />
+                 Text="User name: letters, digits, '.', '_', '-' or '@'. Password: at least 12 characters, no double quote, not ending with a backslash. Setup checks them when you press Next. Only an Argon2id hash of the password is stored." />
         <Control Id="Skip" Type="Text" X="20" Y="180" Width="330" Height="40" NoPrefix="yes"
                  Text="Leave the password empty to install without the admin page; you can add an account later with: wedge admin set-password (see the user guide)." />
         <Control Id="BottomLine" Type="Line" X="0" Y="234" Width="370" Height="0" />

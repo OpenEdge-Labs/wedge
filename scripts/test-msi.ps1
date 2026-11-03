@@ -85,6 +85,17 @@ function Assert-Locked([string]$path) {
     }
 }
 
+# --- 0. Bad choices stop setup before anything changes --------------------
+Write-Host '== a too-short password is refused up front'
+$log = Join-Path $logDir 'short-password.log'
+$p = Start-Process msiexec.exe -ArgumentList "/i `"$Msi`" /qn ADMINPASSWORD=short /l*v `"$log`"" -Wait -PassThru
+if ($p.ExitCode -eq 0) { Fail 'setup accepted a 5-character password' }
+if (-not (Read-Log $log).Contains('The password must have at least 12 characters.')) { Fail 'no clear message in the log' }
+if ((Read-Log $log).Contains('ADMINPASSWORD=short')) { Fail 'the password is in the log' }
+if (Get-Service wedge -ErrorAction SilentlyContinue) { Fail 'a refused setup left the service' }
+if (Test-Path 'C:\Program Files\wedge\wedge.exe') { Fail 'a refused setup left files' }
+Pass 'refused with "at least 12 characters"; nothing installed'
+
 # --- 1. Fresh install with every choice made ------------------------------
 Write-Host '== fresh install, custom choices'
 $root = 'C:\wedge test'
@@ -165,6 +176,22 @@ if (Test-Path -LiteralPath $menu) { Fail 'Start menu folder left' }
 if (Get-NetFirewallRule -DisplayName 'wEdge web server' -ErrorAction SilentlyContinue) { Fail 'firewall rule left' }
 Pass 'uninstalled; configuration kept, shortcuts and firewall rule removed'
 Remove-Item -LiteralPath $root -Recurse -Force
+
+# --- 1b. A folder on a second drive, whose root users may modify ---------
+$drive = Get-PSDrive -PSProvider FileSystem | Where-Object { $_.Name -ne 'C' -and (Test-Path "$($_.Name):\") } |
+    Select-Object -First 1
+if ($drive) {
+    Write-Host "== install on drive $($drive.Name):"
+    $root = "$($drive.Name):\wedge-test"
+    Invoke-Msi 'second-drive' "/i `"$Msi`" INSTALLFOLDER=`"$root`" HTTPPORT=8082" | Out-Null
+    Wait-Running
+    if ((Get-Page 'http://127.0.0.1:8082/').StatusCode -ne 200) { Fail 'not serving from the second drive' }
+    Pass "service runs from $root"
+    Invoke-Msi 'second-drive-uninstall' "/x `"$Msi`"" | Out-Null
+    Remove-Item -LiteralPath $root -Recurse -Force -ErrorAction SilentlyContinue
+} else {
+    Write-Host '  (no second drive on this machine)'
+}
 
 if (-not $PreviousMsi) { Write-Host 'PASS (no previous release given: upgrade not tested)'; exit 0 }
 $PreviousMsi = (Resolve-Path $PreviousMsi).Path

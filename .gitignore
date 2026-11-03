@@ -10,3 +10,7 @@
 .vscode/
 .idea/
 /build/
+
+# Installer custom action build output
+packaging/windows/ca/bin/
+packaging/windows/ca/obj/

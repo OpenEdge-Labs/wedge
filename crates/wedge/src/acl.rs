@@ -91,7 +91,13 @@ pub(crate) fn violations(chain: &[Entry]) -> Vec<String> {
         if !trusted(&entry.owner) {
             problems.push(format!("{} is owned by {}", entry.path, entry.owner));
         }
-        let mask = dangerous(index);
+        let mut mask = dangerous(index);
+        if index >= 2 && is_drive_root(&entry.path) {
+            // A volume root cannot be deleted or renamed, and Windows gives
+            // every signed-in user Modify (which includes DELETE) on the
+            // root of a non-system drive.
+            mask &= !DELETE;
+        }
         for ace in &entry.aces {
             if ace.allow && !ace.inherit_only && !trusted(&ace.sid) && ace.rights & mask != 0 {
                 problems.push(format!(
@@ -102,6 +108,13 @@ pub(crate) fn violations(chain: &[Entry]) -> Vec<String> {
         }
     }
     problems
+}
+
+/// `C:\`, `D:\` and the like (with or without the `\\?\` prefix).
+fn is_drive_root(path: &str) -> bool {
+    let plain = path.trim_start_matches(r"\\?\").trim_end_matches('\\');
+    let bytes = plain.as_bytes();
+    bytes.len() == 2 && bytes[0].is_ascii_alphabetic() && bytes[1] == b':'
 }
 
 /// Reads the access lists through Windows PowerShell. The paths go in an
@@ -251,6 +264,54 @@ mod tests {
             drive_root(),
         ];
         assert_eq!(violations(&chain), Vec::<String>::new());
+    }
+
+    /// D:\ as Windows formats a second NTFS drive: signed-in users have
+    /// Modify on the root itself.
+    fn data_drive_root() -> Entry {
+        Entry {
+            owner: SYSTEM.to_owned(),
+            ..entry(
+                r"D:\",
+                vec![
+                    ace(AUTHENTICATED, 0xe001_0000, true),
+                    ace(AUTHENTICATED, MODIFY, false),
+                    ace(SYSTEM, 0x1f01ff, false),
+                    ace(ADMINISTRATORS, 0x1f01ff, false),
+                    ace(USERS, READ_EXECUTE, false),
+                ],
+            )
+        }
+    }
+
+    #[test]
+    fn locked_folder_on_a_data_drive_passes() {
+        let chain = [
+            entry(r"D:\wedge\wedge.exe", locked()),
+            entry(r"D:\wedge", locked()),
+            data_drive_root(),
+        ];
+        assert_eq!(violations(&chain), Vec::<String>::new());
+        // Only DELETE is excused on a root: permission changes are not.
+        let mut root = data_drive_root();
+        root.aces.push(ace(AUTHENTICATED, WRITE_DAC, false));
+        let chain = [
+            entry(r"D:\wedge\wedge.exe", locked()),
+            entry(r"D:\wedge", locked()),
+            root,
+        ];
+        assert_eq!(violations(&chain).len(), 1);
+        // A folder that is not a root gets no such excuse.
+        let mut open = locked();
+        open.push(ace(AUTHENTICATED, MODIFY, false));
+        let chain = [
+            entry(r"D:\apps\wedge\wedge.exe", locked()),
+            entry(r"D:\apps\wedge", locked()),
+            entry(r"D:\apps", open),
+            data_drive_root(),
+        ];
+        assert_eq!(violations(&chain).len(), 1);
+        assert!(is_drive_root(r"\\?\D:\") && is_drive_root("d:") && !is_drive_root(r"D:\x"));
     }
 
     #[test]

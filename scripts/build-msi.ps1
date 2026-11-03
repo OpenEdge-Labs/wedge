@@ -29,6 +29,12 @@ $rtf = 'build/license.rtf'
 $escaped = (Get-Content LICENSE -Raw).Replace('\', '\\').Replace('{', '\{').Replace('}', '\}') -replace "`r?`n", "\par`n"
 [IO.File]::WriteAllText((Join-Path $PWD $rtf), "{\rtf1\ansi\deff0{\fonttbl{\f0 Consolas;}}\fs16 $escaped}")
 
+# The setup checks (packaging/windows/ca), as a WiX custom action DLL.
+dotnet build packaging/windows/ca/WedgeSetup.csproj -c Release --nologo -v quiet
+if ($LASTEXITCODE -ne 0) { throw 'custom action build failed' }
+$setupCa = 'packaging/windows/ca/bin/Release/net472/WedgeSetup.CA.dll'
+if (-not (Test-Path $setupCa)) { throw "missing $setupCa" }
+
 $msi = "build/wedge-$version-x86_64.msi"
 # Absolute paths: WiX resolves <Files> globs relative to the .wxs file.
 function Get-Full([string]$path) { (Resolve-Path $path).Path }
@@ -37,6 +43,7 @@ wix build packaging/windows/wedge.wxs -arch x64 @extArgs `
     -d "Version=$version" -d "BuildDir=$(Get-Full $layout)" `
     -d "BrandDir=$(Get-Full packaging/branding/generated)" -d "LicenseRtf=$(Get-Full $rtf)" `
     -d "ControlScript=$(Get-Full packaging/windows/wedge-control.cmd)" `
+    -d "SetupCA=$(Get-Full $setupCa)" `
     -o $msi
 if ($LASTEXITCODE -ne 0) { throw 'wix build failed' }
 # The .wixpdb is WiX debug data, not something to ship.

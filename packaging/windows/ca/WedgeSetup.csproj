@@ -1,0 +1,20 @@
+<!-- SPDX-License-Identifier: Apache-2.0 -->
+<!-- Copyright (c) OpenEdge Labs -->
+<!--
+  Installer custom actions that check the setup choices before anything is
+  installed (packaging/windows/wedge.wxs). Builds WedgeSetup.CA.dll, a
+  self-extracting custom action package for the .NET Framework 4.7.2 that
+  ships with Windows 10 and 11. Built by scripts/build-msi.ps1.
+-->
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net472</TargetFramework>
+    <Nullable>disable</Nullable>
+    <Deterministic>true</Deterministic>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="WixToolset.Dtf.CustomAction" Version="5.0.2" />
+    <PackageReference Include="Microsoft.NETFramework.ReferenceAssemblies" Version="1.0.3" PrivateAssets="all" />
+    <Content Include="CustomAction.config" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+</Project>
