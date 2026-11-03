@@ -180,6 +180,21 @@ Remove-Item -LiteralPath $root -Recurse -Force
 # --- 1b. A folder on a second drive, whose root users may modify ---------
 $drive = Get-PSDrive -PSProvider FileSystem | Where-Object { $_.Name -ne 'C' -and (Test-Path "$($_.Name):\") } |
     Select-Object -First 1
+$trustedOwners = 'S-1-5-18', 'S-1-5-32-544', 'S-1-5-80-956008885-3418522649-1831038044-1853292631-2271478464'
+if ($drive) {
+    # wedge refuses a drive whose root an ordinary account owns (the owner
+    # could rename the install folder). The GitHub runner's D: is owned by
+    # NETWORK SERVICE; that throwaway machine gets it handed to Administrators.
+    $driveRoot = "$($drive.Name):\"
+    if ((Get-Acl $driveRoot).GetOwner([Security.Principal.SecurityIdentifier]).Value -notin $trustedOwners) {
+        if ($env:GITHUB_ACTIONS -eq 'true') {
+            icacls $driveRoot /setowner '*S-1-5-32-544' | Out-Null
+        } else {
+            Write-Host "  ($driveRoot is owned by an ordinary account; skipping the second-drive install)"
+            $drive = $null
+        }
+    }
+}
 if ($drive) {
     Write-Host "== install on drive $($drive.Name):"
     $root = "$($drive.Name):\wedge-test"
