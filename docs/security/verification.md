@@ -171,3 +171,24 @@ to 3.0.
 | The new bundle, verified locally | cosign 3.0.2: verified. Cosign 2.4.1 and 2.6.1: verified only with `--new-bundle-format`, which `SECURITY.md` now documents |
 | The v0.1.1 (old format) bundle with cosign 3.0.2 | verified |
 | SignPath 3.0 inputs | every input the workflow passes still exists. The step stays off until the SignPath token exists, so it is not yet run |
+
+## v0.2.0 release (tag at 4dde32d, 2026-11-03)
+
+Before the tag: CI, Security and Installer passed on 4dde32d. The MSI was
+also installed and uninstalled through its dialogs on a Windows 11 desktop,
+and `scripts/test-msi.ps1` passed there in every scenario (short password
+refused, custom install, second drive, upgrade from 0.1.1, fresh reinstall
+with data deleted). Release workflow run 41568291770: gate, linux, windows
+(the same MSI test), macos and publish all passed. 17 assets plus 17
+Sigstore bundles were published.
+
+| Check, on the downloaded release | Tool | Result |
+|---|---|---|
+| Checksums | PowerShell `Get-FileHash` against `SHA256SUMS` | 15 of 15 files OK (the other 7 lines are binaries inside the archives) |
+| Sigstore signatures | cosign 3.0.2 `verify-blob`, identity `^https://github.com/(OpenEdge-Labs\|alinganpatra20004)/wedge/` | 17 of 17 verified |
+| Build provenance | `gh attestation verify --repo OpenEdge-Labs/wedge` | 16 of 17 verified; `wedge-release.asc` is the committed key, not a build output |
+| Package signatures | `rpm -K` (Fedora 40), `gpg --verify _gpgorigin` (Debian 12) | both RPMs and both DEBs good |
+| Dependencies in the binary | cargo-audit 0.22.2 `audit bin` on the unpacked x86_64 musl binary (1402 advisories loaded) | 180 dependencies found, no advisories |
+| Container image (release OCI tarball, amd64) | Trivy 0.56.2 | Rust binary detected, 165 packages, 0 vulnerabilities |
+| Install guides | `scripts/test-install.ps1` against the release URL | Debian 12, Ubuntu 24.04, Kali, Fedora 40, Rocky 9, Alpine 3.20: all pass |
+| Published image `ghcr.io/openedge-labs/wedge:0.2.0` | anonymous pull | not yet checked: the package is still private |
