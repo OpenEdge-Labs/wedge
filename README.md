@@ -49,6 +49,9 @@ wedge run -c wedge.toml
   [configuration reference](docs/guide/configuration-reference.md).
 - [Security policy](SECURITY.md), [threat model](docs/security/threat-model.md)
   and [verification log](docs/security/verification.md).
+- [Code signing policy](docs/security/code-signing.md). Windows release files:
+  free code signing provided by [SignPath.io](https://about.signpath.io/),
+  certificate by [SignPath Foundation](https://signpath.org/) (pending approval).
 - [Request flow](docs/architecture/request-flow.md) through the source.
 
 ## Building

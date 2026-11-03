@@ -17,6 +17,10 @@ Download from the browser:
 
 Then compare `Get-FileHash <file>` with the file's line in `SHA256SUMS`.
 
+Code signing: free code signing provided by [SignPath.io](https://about.signpath.io/),
+certificate by [SignPath Foundation](https://signpath.org/) (Windows files, once the
+project is approved; see the [code signing policy](../security/code-signing.md)).
+
 Or download and verify in PowerShell:
 
 ```powershell
