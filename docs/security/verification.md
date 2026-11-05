@@ -193,3 +193,16 @@ Sigstore bundles were published.
 | Install guides | `scripts/test-install.ps1` against the release URL | Debian 12, Ubuntu 24.04, Kali, Fedora 40, Rocky 9, Alpine 3.20: all pass |
 | Published image `ghcr.io/openedge-labs/wedge:0.2.0` (`sha256:5dead4edfc10…`) | anonymous pull, `docker buildx imagetools inspect`, cosign 3.0.2 `verify`, `gh attestation verify oci://` | public; linux/amd64 and linux/arm64; `latest` is the same digest; signature and build provenance verified |
 | Published image, running (non-root, `--read-only --cap-drop ALL --security-opt no-new-privileges`) | smoke (45 checks), traversal (104 payloads), robustness (13 attacks) | 45/45, 104/104, 13/13; no errors or restarts |
+
+## attest-build-provenance 4.2.2 (pull request #6, 2026-11-05)
+
+Version 4 wraps `actions/attest` 4.2.1 and runs on Node 24. The steps that use
+it run only on version tags, so CI and dry runs do not exercise it; the update
+was checked against the action's own definition instead.
+
+| Check | Result |
+|---|---|
+| Inputs the workflow passes (`subject-path`, `subject-name`, `subject-digest`, `push-to-registry`) | all still exist in v4.2.2 |
+| New behaviour | with `push-to-registry`, v4 also creates an artifact storage record, which needs the `artifact-metadata: write` permission the publish job does not have; set `create-storage-record: false` instead of granting it |
+| CI and Security on the pull request | all 11 checks pass |
+| First real run | the next version tag; its provenance is checked with `gh attestation verify` as usual |
