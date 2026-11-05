@@ -212,6 +212,9 @@ jobs:
           subject-name: ${{ steps.image.outputs.name }}
           subject-digest: ${{ steps.image.outputs.digest }}
           push-to-registry: true
+          # v4 would also create an artifact storage record, which needs the
+          # extra artifact-metadata permission; not used here.
+          create-storage-record: false
       - if: startsWith(github.ref, 'refs/tags/v')
         env:
           GH_TOKEN: ${{ github.token }}
