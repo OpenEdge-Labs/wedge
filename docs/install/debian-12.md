@@ -4,7 +4,7 @@
 
 # Install wedge on Debian 12 (bookworm)
 
-> Tested on 2026-10-31 with wedge 0.1.1 in a clean `debian:12` container (debian@sha256:d74df7598108a173a621eda4d58a2adbf850b2d9a9d81bc2cca1a6c21174a880) by `scripts/test-install.ps1`. The service-manager step is not run there (containers have no init system); wedge runs as the `wedge` user instead.
+> Tested on 2026-11-03 with wedge 0.2.0 in a clean `debian:12` container (debian@sha256:d74df7598108a173a621eda4d58a2adbf850b2d9a9d81bc2cca1a6c21174a880) by `scripts/test-install.ps1`. The service-manager step is not run there (containers have no init system); wedge runs as the `wedge` user instead.
 
 ## 1. Prerequisites
 

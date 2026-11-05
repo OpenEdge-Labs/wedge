@@ -4,7 +4,7 @@
 
 # Install wedge on Kali Linux (rolling)
 
-> Tested on 2026-10-31 with wedge 0.1.1 in a clean `kalilinux/kali-rolling` container (kalilinux/kali-rolling@sha256:ea20024e16833dab1a5337f5998602f3b81f8a38f3b0995dda272c83a1b0c1b9) by `scripts/test-install.ps1`. The service-manager step is not run there (containers have no init system); wedge runs as the `wedge` user instead.
+> Tested on 2026-11-03 with wedge 0.2.0 in a clean `kalilinux/kali-rolling` container (kalilinux/kali-rolling@sha256:7997e0581c4f5c185cfe6773d5cae8fcc7c6b79798726ccaabf843af4bcd2013) by `scripts/test-install.ps1`. The service-manager step is not run there (containers have no init system); wedge runs as the `wedge` user instead.
 
 ## 1. Prerequisites
 

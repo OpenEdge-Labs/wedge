@@ -4,7 +4,7 @@
 
 # Install wedge on RHEL 9 and compatible (Rocky Linux, AlmaLinux)
 
-> Tested on 2026-10-31 with wedge 0.1.1 in a clean `rockylinux:9` container (rockylinux@sha256:d7be1c094cc5845ee815d4632fe377514ee6ebcf8efaed6892889657e5ddaaa6) by `scripts/test-install.ps1`. The service-manager step is not run there (containers have no init system); wedge runs as the `wedge` user instead.
+> Tested on 2026-11-03 with wedge 0.2.0 in a clean `rockylinux:9` container (rockylinux@sha256:d7be1c094cc5845ee815d4632fe377514ee6ebcf8efaed6892889657e5ddaaa6) by `scripts/test-install.ps1`. The service-manager step is not run there (containers have no init system); wedge runs as the `wedge` user instead.
 
 ## 1. Prerequisites
 
